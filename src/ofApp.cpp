@@ -1,7 +1,5 @@
 #include "ofApp.h"
 
-#define WIDTH 256
-#define HEIGHT 256
 
 //--------------------------------------------------------------
 void ofApp::setup(){
@@ -9,80 +7,46 @@ void ofApp::setup(){
     ofEnableSmoothing();
     ofSetFrameRate(60);
     
-    //color.allocate(WIDTH, HEIGHT);
-    bokeh.allocate(WIDTH, HEIGHT);
-    phylo.allocate(WIDTH, HEIGHT);
-    
-    bokeh.setRadius(4);
-    
-    /*color.setCode(STRINGIFY(
-                            uniform sampler2DRect tex0;
-                            
-                            void main() {
-                                vec2 pos = gl_TexCoord[0].xy;
-                                float intensity = texture2DRect(tex0, pos).r;
-                                
-                                gl_FragColor = vec4(intensity, intensity, intensity, 1.0);
-                            }
-                  ));*/
-    
     ofSetWindowShape(1280, 720);
+    
+    gen = 0;
+
+    phylo.allocate(WIDTH, HEIGHT);
     
     
     // setup gui
     gui = new ofxUISuperCanvas("Parameters");
     
     gui->addFPS();
+    lblGen = gui->addLabel("GENERATION", "");
     gui->addSlider("mu", 0.0, 0.005, &phylo.mu)->setLabelPrecision(4);
     gui->addSlider("beta", 0.0, 10.0, &phylo.beta);
     
+    gui->setTheme(OFX_UI_THEME_BERLIN);
     gui->loadSettings("gui.xml");
-    
-    reset();
 }
-
-//--------------------------------------------------------------
-void ofApp::reset() {
-    
-    phylo.begin();
-    ofBackground(0);
-    phylo.end();
-    
-    bokeh.begin();
-    ofBackground(0);
-    ofSetColor(255, 0, 0);
-    ofCircle(WIDTH / 2, HEIGHT / 2, 3);
-    bokeh.end();
-}
-
 
 //--------------------------------------------------------------
 void ofApp::update(){
     
-    bokeh.update();
-    
-    phylo << bokeh;
-    
-    for (int i = 0; i < 100; i++)
+    for (int i = 0; i < STEP; i++) {
         phylo.update();
+    }
+    gen += STEP;
     
-    bokeh.begin();
-    ofBackground(0);
-    bokeh.end();
+    
 }
 
 //--------------------------------------------------------------
 void ofApp::draw(){
 
-    ofBackground(0, 0, 0);
+    ofBackground(32);
 
-    bokeh.draw();
-    
-    ofTranslate(WIDTH, 0);
     phylo.draw();
-    ofTranslate(-WIDTH, 0);
     
-    //color.draw();
+    ss.str("");
+    ss << "generation:" << gen;
+    lblGen->setLabel(ss.str());
 }
 
 //--------------------------------------------------------------
@@ -93,8 +57,6 @@ void ofApp::exit(){
 
 //--------------------------------------------------------------
 void ofApp::keyPressed(int key){
-
-    reset();
 }
 
 //--------------------------------------------------------------
@@ -113,6 +75,12 @@ void ofApp::mouseDragged(int x, int y, int button){
 
 //--------------------------------------------------------------
 void ofApp::mousePressed(int x, int y, int button){
+    phylo.begin();
+    ofSetColor(255, 255, 255);
+    ofCircle(WIDTH / 2, HEIGHT / 2, 100);
+    phylo.end();
+    
+    cout << "pressed";
 }
 
 //--------------------------------------------------------------
