@@ -10,13 +10,14 @@
 
 #include "ofMain.h"
 #include "ofxFXObject.h"
+#include "ofxOpenCv.h"
 
 class Phyllotaxis : public ofxFXObject {
 public:
     
     Phyllotaxis() {
         
-        passes = 1;
+        passes = 2;
         internalFormat = GL_RGB32F;
         
         timestep = 0.0008f;
@@ -28,9 +29,9 @@ public:
         
         fragmentShader = STRINGIFY(
                                    uniform sampler2DRect backbuffer;
-                                   uniform sampler2DRect tex0;
+                                   uniform sampler2DRect tex0;          // initial pattern
+                                   uniform sampler2DRect tex1;          // mask
                                    
-                                   // parameters
                                    uniform float timestep;
                                    uniform float h;
                                    uniform float mu;
@@ -38,18 +39,27 @@ public:
                                    uniform int   isInit;
                                    
                                    float neighbor(vec2 pos, float x, float y) {
-                                       vec2 offset = vec2(x, y);
-                                       float raw = texture2DRect(backbuffer, pos + offset).r + texture2DRect(tex0, pos + offset).r;
+                                       
+                                       vec2 offset = pos + vec2(x, y);
+                                       
+                                       float raw = texture2DRect(backbuffer, offset).r;
+                                       
+                                       if (texture2DRect(tex0, offset).g < 0.5) {
+                                           raw = 0.5;
+                                       }
+                                       
                                        return clamp(raw, 0.0, 1.0) * 10.0 - 5.0;
                                    }
                                    
                                    void main() {
-                            
+                                       
                                        vec2 pos = gl_TexCoord[0].xy;
                                        
                                        if (isInit == 1) {
                                            
-                                           gl_FragColor = vec4(0.0, 0.0, 0.0, 1.0);
+                                           float a = 0.5 + texture2DRect(tex0, pos).r;
+                                           
+                                           gl_FragColor = vec4(a, a, a, 1.0);
                                            
                                        } else if (isInit == 0) {
                                            
@@ -113,6 +123,6 @@ public:
     
     };
     
-    float timestep, h, mu, beta;
+    float timestep, h, mu, beta, pattern;
     int isInit;
 };

@@ -8,6 +8,7 @@ void ofApp::setup(){
     ofSetFrameRate(FPS);
     
     ofSetWindowShape(1280, 720);
+    ofSetCircleResolution(100);
     
     gen = 0;
 
@@ -16,12 +17,25 @@ void ofApp::setup(){
     lut.allocate(WIDTH, HEIGHT);
     
     blur.setInternalFormat(GL_RGB32F);
-    blur.setRadius(2);
+    blur.setRadius(0);
     
     lut.setInternalFormat(GL_RGB32F);
     lut.loadLUT("sunflower.cube");
     
     exporter.allocate(WIDTH, HEIGHT, OF_IMAGE_COLOR);
+    
+    
+    // cv
+    maskGray.allocate(WIDTH, HEIGHT);
+    maskColor.allocate(WIDTH, HEIGHT);
+    
+    
+    framePrev = new ofxCvGrayscaleImage();
+    frameCnt  = new ofxCvGrayscaleImage();
+    
+    framePrev->allocate(WIDTH, HEIGHT);
+    frameCnt->allocate(WIDTH, HEIGHT);
+    frameDiff.allocate(WIDTH, HEIGHT);
     
     
     // setup gui
@@ -35,8 +49,58 @@ void ofApp::setup(){
     gui->setTheme(OFX_UI_THEME_BERLIN);
     gui->loadSettings("gui.xml");
     
-    
     // reset
+    setInitialPattern();
+}
+
+//--------------------------------------------------------------
+void ofApp::setInitialPattern() {
+    
+    gen = 0;
+    
+    // load image
+    maskImg.loadImage("heart.png");
+    maskColor.setFromPixels(maskImg.getPixelsRef());
+    maskGray.setFromColorImage(maskColor);
+    
+    
+    // calucate initial seed arrangement
+    contourFinder.findContours(maskGray, 5, (WIDTH*HEIGHT), 10, false);
+    
+    
+    // setup initial pattern
+    blur.begin();
+    
+    ofBackground(0);
+    ofEnableBlendMode(OF_BLENDMODE_ADD);
+    
+    ofSetColor(0, 255, 0);
+    maskImg.draw(0, 0);
+    
+    for (int i = 0; i < contourFinder.nBlobs; i++) {
+        ofxCvBlob blob = contourFinder.blobs[i];
+        
+        ofPath path;
+    
+        path.setFilled(false);
+        path.setStrokeWidth(3);
+        path.setStrokeColor(ofColor(255, 255, 0));
+        path.moveTo(blob.pts[0]);
+        
+        for (int j = 0; j < blob.nPts; j++) {
+            
+            path.lineTo(blob.pts[j]);
+        }
+        
+        path.close();
+        path.draw();
+    }
+
+    blur.end();
+    blur.update();
+    
+    // apply and set initial pattern
+    phylo.setTexture(blur.getTextureReference());
     phylo.init();
 }
 
@@ -48,7 +112,18 @@ void ofApp::update(){
         phylo << blur;
     }
     
-    lut << phylo;
+    //lut << phylo;
+    
+    frameFbo = phylo.getBackBuffer();
+    frameFbo->readToPixels(framePixels);
+    maskColor.setFromPixels(framePixels.getPixels(), WIDTH, HEIGHT);
+    
+    frameCnt->setFromColorImage(maskColor);
+    
+    frameDiff.absDiff(*framePrev, *frameCnt);
+    
+    frameDiff.threshold(128);
+    
     
     gen += STEP;
 }
@@ -59,21 +134,24 @@ void ofApp::draw(){
     ofBackground(32);
     
     ofPushMatrix();
+    
     blur.draw();
+    ofSetColor(255);
     ofTranslate(WIDTH, 0);
     phylo.draw();
     ofTranslate(WIDTH, 0);
-    lut.draw();
+    maskColor.draw(0, 0);
+    //lut.draw();
     ofPopMatrix();
     
     ss.str("");
     ss << "generation:" << gen;
     lblGen->setLabel(ss.str());
     
-    ss.str("");
+    /*ss.str("");
     ss << "../../mov/of_exported/sunflower" << setfill('0') << setw(6) << ofGetFrameNum() << ".bmp";
     exporter.grabScreen(WIDTH * 2, 0, WIDTH, HEIGHT);
-    exporter.saveImage(ss.str());
+    exporter.saveImage(ss.str());*/
 }
 
 //--------------------------------------------------------------
@@ -86,34 +164,8 @@ void ofApp::exit(){
 void ofApp::keyPressed(int key){
     
     if (key == ' ') {
-
-        blur.begin();
-        ofBackground(0);
         
-        float angle, x, y;
-        
-        int count = 30;
-        
-        for (int i = 0; i < count; i++) {
-            
-            angle = TWO_PI * (float)i / (float)count;
-            x = (cos(angle) + 1.0) * WIDTH / 2.0;
-            y = (sin(angle) + 1.0) * HEIGHT / 2.0;
-            ofCircle(x, y, 3);
-            
-        }
-        
-        blur.end();
-        blur.update();
-        
-        phylo << blur;
-        gen++;
-        
-        blur.begin();
-        ofBackground(0);
-        blur.end();
-        blur.update();
-    
+        setInitialPattern();
     }
 }
 

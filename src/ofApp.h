@@ -34,16 +34,30 @@ public:
     void dragEvent(ofDragInfo dragInfo);
     void gotMessage(ofMessage msg);
     
-    int gen;
-    stringstream ss;
+    void setInitialPattern();
     
+    int                     gen;
+    stringstream            ss;
     
-    ofxUISuperCanvas *gui;
-    ofxUILabel *lblGen;
+    ofxUISuperCanvas        *gui;
+    ofxUILabel              *lblGen;
     
-    ofxGaussianBlur blur;
-    Phyllotaxis phylo;
-    ofxLUT lut;
+    ofxGaussianBlur         blur;
+    Phyllotaxis             phylo;
+    ofxLUT                  lut;
     
+    ofImage maskImg;
     ofImage exporter;
+    
+    ofFbo                   *frameFbo;
+    ofPixels                framePixels;
+    
+    // cv
+    ofxCvColorImage         maskColor;
+    ofxCvGrayscaleImage     maskGray;
+    ofxCvGrayscaleImage     *framePrev;
+    ofxCvGrayscaleImage     *frameCnt;
+    ofxCvGrayscaleImage     frameDiff;
+    
+    ofxCvContourFinder      contourFinder;
 };
