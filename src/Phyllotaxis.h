@@ -16,11 +16,15 @@ public:
     
     Phyllotaxis() {
         
-        passes = 2;
-        internalFormat = GL_RGB;
+        passes = 1;
+        internalFormat = GL_RGB32F;
         
+        timestep = 0.0008f;
+        h = 0.4f;
         mu = 0.001f;
         beta = 3.0f;
+        
+        isInit = 0;
         
         fragmentShader = STRINGIFY(
                                    uniform sampler2DRect backbuffer;
@@ -31,94 +35,84 @@ public:
                                    uniform float h;
                                    uniform float mu;
                                    uniform float beta;
+                                   uniform int   isInit;
                                    
                                    float neighbor(vec2 pos, float x, float y) {
                                        vec2 offset = vec2(x, y);
                                        float raw = texture2DRect(backbuffer, pos + offset).r + texture2DRect(tex0, pos + offset).r;
-                                       //float raw = texture2DRect(tex0, pos + offset).r;
-                                       //float raw = texture2DRect(backbuffer, pos+offset).r;
-                                       return clamp(raw, 0.0, 1.0);//raw * 3.0 - 0.5;
+                                       return clamp(raw, 0.0, 1.0) * 10.0 - 5.0;
                                    }
                                    
                                    void main() {
                             
                                        vec2 pos = gl_TexCoord[0].xy;
                                        
-                                       // get neighbor pixel
-                                       //float a  = neighbor(pos,  0.0,  0.0);
-                                       /*float n  = neighbor(pos,  0.0, -1.0);
-                                       float n2 = neighbor(pos,  0.0, -2.0);
-                                       float ne = neighbor(pos, +1.0, -1.0);
-                                       float e  = neighbor(pos, +1.0,  0.0);
-                                       float e2 = neighbor(pos, +2.0,  0.0);
-                                       float se = neighbor(pos, +1.0, +1.0);
-                                       float s  = neighbor(pos,  0.0, +1.0);
-                                       float s2 = neighbor(pos,  0.0, +2.0);
-                                       float sw = neighbor(pos, -1.0, +1.0);
-                                       float w  = neighbor(pos, -1.0,  0.0);
-                                       float w2 = neighbor(pos, -2.0,  0.0);
-                                       float nw = neighbor(pos, -1.0, -1.0);
-                                       
-                                       float laplacian = (n + e + s + w - 4.0 * a) / (h * h);
-                                       float bilaplacian = (n2 + e2 + s2 + w2 + 2.0 * (ne + se + sw + nw)
-                                                            - 8.0 * (n + e + s + w) + 20.0 * a) / (h * h * h * h);
-                                       float gradX = (e - w) / (2.0 * h);
-                                       float gradY = (s - n) / (2.0 * h);
-                                       float gradMagSqared = gradX * gradX + gradY * gradY;
-                                       
-                                       float delta = mu * a - (bilaplacian + 2.0 * laplacian + a) - (beta / 3.0) * (gradMagSqared + 2.0 * a * laplacian) - a * a * a;
-                                       
-                                       float result = a + timestep * delta;*/
-                                       
-                                       //gl_FragColor = vec4(result + 0.5, 0.0, 0.0, 1.0);
-                                       
-                                       float a = texture2DRect(tex0, pos).r;
-                                       
-                                       gl_FragColor = vec4(a, 0.0, 0.0, 1.0);
-                                       //gl_FragColor = vec4(bilaplacian / 10.0, 0.0, 0.0, 1.0);
+                                       if (isInit == 1) {
+                                           
+                                           gl_FragColor = vec4(0.0, 0.0, 0.0, 1.0);
+                                           
+                                       } else if (isInit == 0) {
+                                           
+                                           float a  = neighbor(pos,  0.0,  0.0);
+                                           float n  = neighbor(pos,  0.0, -1.0);
+                                           float n2 = neighbor(pos,  0.0, -2.0);
+                                           float ne = neighbor(pos, +1.0, -1.0);
+                                           float e  = neighbor(pos, +1.0,  0.0);
+                                           float e2 = neighbor(pos, +2.0,  0.0);
+                                           float se = neighbor(pos, +1.0, +1.0);
+                                           float s  = neighbor(pos,  0.0, +1.0);
+                                           float s2 = neighbor(pos,  0.0, +2.0);
+                                           float sw = neighbor(pos, -1.0, +1.0);
+                                           float w  = neighbor(pos, -1.0,  0.0);
+                                           float w2 = neighbor(pos, -2.0,  0.0);
+                                           float nw = neighbor(pos, -1.0, -1.0);
+                                           
+                                           float laplacian = (n + e + s + w - 4.0 * a) / (h * h);
+                                           float bilaplacian = (n2 + e2 + s2 + w2 + 2.0 * (ne + se + sw + nw)
+                                                                - 8.0 * (n + e + s + w) + 20.0 * a) / (h * h * h * h);
+                                           float gradX = (e - w) / (2.0 * h);
+                                           float gradY = (s - n) / (2.0 * h);
+                                           float gradMagSqared = gradX * gradX + gradY * gradY;
+                                           
+                                           float delta = mu * a - (bilaplacian + 2.0 * laplacian + a) - (beta / 3.0) * (gradMagSqared + 2.0 * a * laplacian) - a * a * a;
+                                           float result = a + timestep * delta;
+                                           float v = (result + 5.0) / 10.0;
+                                           
+                                           gl_FragColor = vec4(v, v, v, 1.0);
+                                       }
                                    }
-        
         );
         
     };
     
+    void init() {
+        
+        isInit = 1;
+        update();
+        isInit = 0;
+    }
+    
     void update() {
         
-        for (int i = 0; i < passes; i++) {
-            pingPong.dst->begin();
-            ofClear(0, 0, 0, 255);
-            
-            shader.begin();
-            shader.setUniform1f("timestep", (float)0.0001);
-            shader.setUniform1f("h", (float)0.055);
-            shader.setUniform1f("mu", (float)mu);
-            shader.setUniform1f("beta", (float)beta);
-            renderFrame();
-            shader.end();
-            pingPong.dst->end();
-            
-            pingPong.swap();
-        }
-        
-        //pingPong.swap();
-        
-        /*pingPong.dst->begin();
+        pingPong.dst->begin();
         ofClear(0, 255);
         
         shader.begin();
         shader.setUniformTexture("backbuffer", pingPong.src->getTextureReference(), 0);
         shader.setUniformTexture("tex0", textures[0].getTextureReference(), 1);
-        shader.setUniform1f("timestep", (float)0.0001);
-        shader.setUniform1f("h", (float)0.055);
-        shader.setUniform1f("mu", (float)mu);
-        shader.setUniform1f("beta", (float)beta);
+        shader.setUniform1f("timestep", 0.0008f);
+        shader.setUniform1f("h", 0.4f);
+        shader.setUniform1f("mu", mu);
+        shader.setUniform1f("beta", beta);
+        shader.setUniform1i("isInit", isInit);
         renderFrame();
         shader.end();
         pingPong.dst->end();
         
-        pingPong.swap();*/
+        pingPong.swap();
     
     };
     
-    float mu, beta;
+    float timestep, h, mu, beta;
+    int isInit;
 };

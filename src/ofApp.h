@@ -4,14 +4,17 @@
 #include "ofxUI.h"
 #include "ofxFXObject.h"
 #include "ofxGaussianBlur.h"
+#include "ofxBokeh.h"
+#include "ofxLUT.h"
 #include "ofxCvFloatImage.h"
 
 #include "Phyllotaxis.h"
 
-#define WIDTH 128
-#define HEIGHT 128
+#define WIDTH 256
+#define HEIGHT 256
 #define SIZE 16384
-#define STEP 1
+#define STEP 512
+#define FPS 24
 
 class ofApp : public ofBaseApp{
 
@@ -38,10 +41,9 @@ public:
     ofxUISuperCanvas *gui;
     ofxUILabel *lblGen;
     
-    //ofxGrayScott gray;
-    //ofxGaussianBlur blur;
+    ofxGaussianBlur blur;
     Phyllotaxis phylo;
-    //ofxFXObject color;
+    ofxLUT lut;
     
-    //float pixels[SIZE];
+    ofImage exporter;
 };
