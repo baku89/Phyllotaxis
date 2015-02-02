@@ -10,15 +10,19 @@
 
 #include "Phyllotaxis.h"
 
-#define WIDTH 256
-#define HEIGHT 256
-#define SIZE 16384
-#define STEP 512
-#define FPS 24
+//#define WIDTH 512
+//#define HEIGHT 512
+//#define SIZE 16384
+#define STEP 1024
+#define FPS 6
+
+#define DATA_DIR "/Volumes/MugiRAID1/Works/2015/01_fasciation/of/"
 
 class ofApp : public ofBaseApp{
-
+    
 public:
+    ofApp(vector<string> args);
+    
     void setup();
     void update();
     void draw();
@@ -35,12 +39,34 @@ public:
     void gotMessage(ofMessage msg);
     
     void setInitialPattern();
+    void saveFrame();
+    
+    string                  fileName;
+    
+    int                     width, height;
     
     int                     gen;
+    float                   frameDiffThreshold;
+    float                   frameDiffContourMin;
+    float                   frameDiffContourMax;
+    
+    int                     frameElapsedTime;
+    
+    int                     cntFrame;
+    
+    bool                    bNextFrame;
+    
+    string                  exportName;
+    
     stringstream            ss;
+    
+    ofVideoPlayer           source;
     
     ofxUISuperCanvas        *gui;
     ofxUILabel              *lblGen;
+    ofxUILabel              *lblProgress;
+    ofxUILabel              *lblDiffSeedCount;
+    ofxUIMovingGraph        *mgDiffDetected;
     
     ofxGaussianBlur         blur;
     Phyllotaxis             phylo;
@@ -53,7 +79,7 @@ public:
     ofPixels                framePixels;
     
     // cv
-    ofxCvColorImage         maskColor;
+    ofxCvColorImage         cvColor;
     ofxCvGrayscaleImage     maskGray;
     ofxCvGrayscaleImage     *framePrev;
     ofxCvGrayscaleImage     *frameCnt;
